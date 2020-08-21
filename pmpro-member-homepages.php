@@ -35,7 +35,7 @@ function pmpromh_login_redirect( $redirect_to, $request, $user ) {
 			$member_homepage_id = pmpromh_getHomepageForLevel( $level->id );
 			$ignore_redirect_to = pmpromh_ignore_redirect_to( $level->id );
 			// Member has a member homepage, override the redirect_to if level set to ignore other redirects.
-			if ( ! empty( $member_homepage_id ) && ! is_page( $member_homepage_id ) && ! empty( $ignore_redirect_to ) ) {
+			if ( ! empty( $member_homepage_id ) && ! is_page( $member_homepage_id ) && ! $ignore_redirect_to ) {
 				$redirect_to = get_permalink( $member_homepage_id );
 			}
 		}
@@ -130,9 +130,10 @@ function pmpromh_getHomepageForLevel( $level_id = NULL ) {
  * @return bool true if yes, false if no.
  */
 function pmpromh_ignore_redirect_to( $level_id = null ) {
+	global $current_user;
+	$user_id = isset( $current_user->ID ) ? $current_user->ID : 0;
 	if ( empty( $level_id ) && function_exists( 'pmpro_getMembershipLevelForUser' ) ) {
-		global $current_user;
-		$level = pmpro_getMembershipLevelForUser( $current_user->ID );
+		$level = pmpro_getMembershipLevelForUser( $user_id );
 		if ( ! empty( $level ) ) {
 			$level_id = $level->id;
 		}
@@ -145,7 +146,20 @@ function pmpromh_ignore_redirect_to( $level_id = null ) {
 		$ignore_redirect_to = true;
 	}
 
-	return $ignore_redirect_to;
+	/**
+	 * Determine whether to ignore the redirect_to query parameter programmatically.
+	 *
+	 * Can be used to enable redirect_to for all levels programmatically.
+	 *
+	 * @since 0.4
+	 *
+	 * @param bool     $ignore_redirect_to true or false.
+	 * @param int|null $level_id           The level ID.
+	 * @param int      $user_id            The current user ID. 0 if not logged in.
+	 *
+	 * @return bool    true to allow redirect_to, false if not.
+	 */
+	return apply_filters( 'pmpromh_ignore_redirect_to', $ignore_redirect_to, $level_id, $user_id );
 }
 
 /**
